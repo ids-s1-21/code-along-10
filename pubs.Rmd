@@ -68,13 +68,17 @@ shape_data <- read_sf(
 shape_data %>%
   rename(area_code = lad18cd) %>%
   left_join(pubs_data, by = "area_code") %>%
-  filter(!str_detect(area_code, "^N")) %>%
+  # Filter for Scotland so it knits on RStudio Cloud; remove this next line if
+  # you want to make the whole map and you can get the code to run!
+  filter(str_detect(area_code, "^S")) %>%
   ggplot(aes(fill = coastal)) +
   geom_sf(colour = "black") +
   scale_fill_manual(values = c(Coastal = "turquoise", Inland = "darkGreen")) +
   labs(fill = "Area type") +
   theme_minimal()
 ```
+
+By this definition, Glasgow is coastal, but Glaswegians might disagree with that!
 
 
 ## Exploratory data analysis

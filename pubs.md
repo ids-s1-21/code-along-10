@@ -96,7 +96,9 @@ shape_data <- read_sf(
 shape_data %>%
   rename(area_code = lad18cd) %>%
   left_join(pubs_data, by = "area_code") %>%
-  filter(!str_detect(area_code, "^N")) %>%
+  # Filter for Scotland so it knits on RStudio Cloud; remove this next line if
+  # you want to make the whole map and you can get the code to run!
+  filter(str_detect(area_code, "^S")) %>%
   ggplot(aes(fill = coastal)) +
   geom_sf(colour = "black") +
   scale_fill_manual(values = c(Coastal = "turquoise", Inland = "darkGreen")) +
@@ -105,6 +107,9 @@ shape_data %>%
 ```
 
 ![](pubs_files/figure-gfm/map-1.png)<!-- -->
+
+By this definition, Glasgow is coastal, but Glaswegians might disagree
+with that!
 
 ## Exploratory data analysis
 
@@ -118,18 +123,18 @@ glimpse(pubs_data)
 
     ## Rows: 391
     ## Columns: 12
-    ## $ area_code       <chr> "E06000047", "E06000005", "E06000001", "E06000002", "E~
-    ## $ area_name       <chr> "County Durham", "Darlington", "Hartlepool", "Middlesb~
-    ## $ num_pubs        <dbl> 325, 70, 50, 65, 245, 85, 110, 120, 195, 105, 100, 145~
-    ## $ pop             <dbl> 526980, 106566, 93242, 140545, 320274, 136718, 197213,~
-    ## $ pubs_per_capita <dbl> 0.0006167217, 0.0006568699, 0.0005362390, 0.0004624853~
-    ## $ country         <chr> "England", "England", "England", "England", "England",~
-    ## $ median_pay_2017 <dbl> 439.0, 416.2, 431.6, 364.3, 413.2, 387.6, 435.7, 405.5~
-    ## $ area_sqkm       <dbl> 2231.5422, 197.4758, 93.5595, 53.8888, 5026.2114, 244.~
-    ## $ coastal         <chr> "Coastal", "Inland", "Coastal", "Coastal", "Coastal", ~
-    ## $ pop_dens        <dbl> 236.15059, 539.64081, 996.60644, 2608.05585, 63.72076,~
-    ## $ life_exp_female <dbl> 81.46, 82.39, 81.33, 80.02, 82.71, 81.78, 81.41, 81.43~
-    ## $ life_exp_male   <dbl> 78.24, 78.72, 76.82, 75.27, 79.40, 77.99, 78.14, 77.46~
+    ## $ area_code       <chr> "E06000047", "E06000005", "E06000001", "E06000002", "E…
+    ## $ area_name       <chr> "County Durham", "Darlington", "Hartlepool", "Middlesb…
+    ## $ num_pubs        <dbl> 325, 70, 50, 65, 245, 85, 110, 120, 195, 105, 100, 145…
+    ## $ pop             <dbl> 526980, 106566, 93242, 140545, 320274, 136718, 197213,…
+    ## $ pubs_per_capita <dbl> 0.0006167217, 0.0006568699, 0.0005362390, 0.0004624853…
+    ## $ country         <chr> "England", "England", "England", "England", "England",…
+    ## $ median_pay_2017 <dbl> 439.0, 416.2, 431.6, 364.3, 413.2, 387.6, 435.7, 405.5…
+    ## $ area_sqkm       <dbl> 2231.5422, 197.4758, 93.5595, 53.8888, 5026.2114, 244.…
+    ## $ coastal         <chr> "Coastal", "Inland", "Coastal", "Coastal", "Coastal", …
+    ## $ pop_dens        <dbl> 236.15059, 539.64081, 996.60644, 2608.05585, 63.72076,…
+    ## $ life_exp_female <dbl> 81.46, 82.39, 81.33, 80.02, 82.71, 81.78, 81.41, 81.43…
+    ## $ life_exp_male   <dbl> 78.24, 78.72, 76.82, 75.27, 79.40, 77.99, 78.14, 77.46…
 
 It would be good to see where our missing data are. For this, there are
 two functions you haven’t necessarily seen before: `across` and
@@ -148,7 +153,7 @@ cols_with_NAs <- pubs_data %>%
 cols_with_NAs
 ```
 
-    ## # A tibble: 1 x 4
+    ## # A tibble: 1 × 4
     ##   NAs_median_pay_2017 NAs_coastal NAs_life_exp_female NAs_life_exp_male
     ##                 <int>       <int>               <int>             <int>
     ## 1                  13          11                  20                20
@@ -284,7 +289,7 @@ pubs_data %>%
   select(area_name, num_pubs, pop, pubs_per_capita)
 ```
 
-    ## # A tibble: 2 x 4
+    ## # A tibble: 2 × 4
     ##   area_name       num_pubs   pop pubs_per_capita
     ##   <chr>              <dbl> <dbl>           <dbl>
     ## 1 City of London       160  8706         0.0184 
@@ -348,7 +353,7 @@ mod <- linear_reg() %>%
 tidy(mod)
 ```
 
-    ## # A tibble: 2 x 5
+    ## # A tibble: 2 × 5
     ##   term                estimate   std.error statistic  p.value
     ##   <chr>                  <dbl>       <dbl>     <dbl>    <dbl>
     ## 1 (Intercept)      0.00100     0.0000909       11.0  1.15e-24
@@ -377,11 +382,11 @@ half of its population earning £0 per week.* 💡
 glance(mod)
 ```
 
-    ## # A tibble: 1 x 12
+    ## # A tibble: 1 × 12
     ##   r.squared adj.r.squared    sigma statistic  p.value    df logLik    AIC    BIC
     ##       <dbl>         <dbl>    <dbl>     <dbl>    <dbl> <dbl>  <dbl>  <dbl>  <dbl>
     ## 1    0.0434        0.0408 0.000260      17.1  4.48e-5     1  2585. -5164. -5152.
-    ## # ... with 3 more variables: deviance <dbl>, df.residual <int>, nobs <int>
+    ## # … with 3 more variables: deviance <dbl>, df.residual <int>, nobs <int>
 
 The *R*<sup>2</sup> isn’t amazing here. Perhaps we can improve the model
 fit by considering more terms?
