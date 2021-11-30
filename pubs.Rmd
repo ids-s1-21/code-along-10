@@ -70,7 +70,7 @@ shape_data %>%
   left_join(pubs_data, by = "area_code") %>%
   # Filter for Scotland so it knits on RStudio Cloud; remove this next line if
   # you want to make the whole map and you can get the code to run!
-  filter(str_detect(area_code, "^S")) %>%
+  filter(!str_detect(area_code, "^N")) %>%
   ggplot(aes(fill = coastal)) +
   geom_sf(colour = "black") +
   scale_fill_manual(values = c(Coastal = "turquoise", Inland = "darkGreen")) +
@@ -223,9 +223,9 @@ glance(mod)
 
 The $R^2$ isn't amazing here.  Perhaps we can improve the model fit by considering more terms?
 
-### Adding a categorical predictor
+### Adding other variables
 
-This document will be completed during the live session.
+Let's try fitting a full model.  But we'll do this "properly", defining a proper workflow.  We'll filter out Northern Ireland, because for several of the variables we have no data for it, and so we would either need to fill in these data (using different datasets) or, more likely, fit a different model.  We also create dummy variables; since our response is not a "nominal" variable, we don't need to exclude it, but if we did we'd add `, -all_outcomes()` to the `step_dummy` step.
 
 ```{r workflow}
 pubs_rec <- recipe(pubs_per_capita ~ ., data = pubs_reduced) %>%
@@ -241,14 +241,80 @@ pubs_wflow <- workflow() %>%
   add_recipe(pubs_rec)
 ```
 
+We'll now do a test-train split.  Of course, we should have done this right at the start, because we shouldn't touch our testing data at all until the very end of our analysis.  We didn't do the split earlier because this code-along touch place over three weeks, and we hadn't done test-train splits when we started!
+
 ```{r test-train-split}
 set.seed(8651)
 pubs_split <- initial_split(pubs_reduced, prop = 0.8, strata = country)
 pubs_train <- training(pubs_split)
 pubs_test  <- testing(pubs_split)
+```
 
+Now we can try fitting a model to the training data.
+
+```{r workflow-fit}
 pubs_train_fit <- pubs_wflow %>%
   fit(data = pubs_train)
 tidy(pubs_train_fit)
-glance(pubs_train_fit)
 ```
+
+`r lightbulb("Interpret this model, in terms of how the number of pubs **per 10,000 people** changes as each of these factors increases.")`
+
+We've talked before about how it's a good idea for explanatory variables to be approximately uncorrelated.  This is a good example of why: in our model, `pubs_per_capita` increases as `life_exp_female` increases, but it *decreases* as `life_exp_male` increases---all else being equal, that is.  The thing is that, in real life, all else just isn't equal: in general, as female life expectancy increases in a region, so does male life expectancy (see the pairs plot several sections up!).
+
+So let's try working with a new variable, `life_exp_diff`, which is the difference between the two life expectancies.  If we then just use one of the life expectancy variables, this should hopefully get rid of much of the correlation---but let's check that.  On this plot, negative values of the difference indicate that women's life expectancy is higher than men's.
+
+```{r check-corr}
+pubs_train %>%
+  mutate(life_exp_diff = life_exp_male - life_exp_female) %>%
+  ggplot(aes(x = life_exp_female, y = life_exp_diff)) +
+  geom_point() +
+  labs(
+    x = "Life expectancy for women (years)",
+    y = "Difference between men's and women's life expectancy (years)",
+    title = "This isn't perfect, but there's much less correlation here",
+    subtitle = "Data from 2016–18 across UK local authorities; some missing data"
+  )
+```
+
+The missing data, as we outlined above, are the City of London, the Isles of Scilly, and those local authorities which existed in 2018 but no longer exist today.
+
+Now we'll refit the model, and it will maybe let us make more sensible interpretations.
+
+```{r workflow-2}
+pubs_rec_diff <- pubs_rec %>%
+  step_mutate(life_exp_diff = life_exp_male - life_exp_female) %>%
+  step_rm(life_exp_male)
+
+pubs_wflow_diff <- workflow() %>%
+  add_model(pubs_mod) %>%
+  add_recipe(pubs_rec_diff)
+
+pubs_train_fit_diff <- pubs_wflow_diff %>%
+  fit(data = pubs_train)
+tidy(pubs_train_fit_diff)
+```
+
+
+`r lightbulb("All the estimates except that for \x60life_exp_female\x60 are exactly the same.  Do you think this is a coincidence?")`
+
+Now we can sensibly interpret this: for each year added on to women's life expectancy, *all else being equal*, the number of pubs per 10,000 people increases by `r abs_str(pubs_train_fit_diff, "life_exp_female", scale = 1e4)`, and as the difference in men's and women's life expectancy increases by one year, *all else being equal*, the number of pubs per 10,000 people increases by `r abs_str(pubs_train_fit_diff, "life_exp_diff", scale = 1e4)` ^[We're not talking much about $p$-values in this course, but, for what it's worth, the `life_exp_female` variable in this model is now much more significant than either of the life expectancies in the original.].
+
+`r lightbulb("What would happen if we took men's life expectancy and the difference as the two life expectancy variables?")`
+
+Finally, let's have a look at the adjusted $R^2$ for these two models.
+
+```{r glance}
+glance(pubs_train_fit)
+glance(pubs_train_fit_diff)
+```
+
+It's the same!
+
+`r lightbulb("Do you think **this** is a coincidence?")`
+
+This doesn't always happen when you mutate variables; it's because we replaced one of our variables with a "linear combination" of that variable and another.  I can't say more than that without getting too technical!
+
+Finally, I'll just note that the adjusted $R^2$ value... isn't that great, still, though it's better than in the univariate model.  We might want to see if there are any better models we could fit, perhaps with additional data.
+
+`r lightbulb("What could we do next?  How could we run a $v$-fold cross validation?  At what point should we use the training data, and for what?")`

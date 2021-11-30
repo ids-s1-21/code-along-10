@@ -98,7 +98,7 @@ shape_data %>%
   left_join(pubs_data, by = "area_code") %>%
   # Filter for Scotland so it knits on RStudio Cloud; remove this next line if
   # you want to make the whole map and you can get the code to run!
-  filter(str_detect(area_code, "^S")) %>%
+  filter(!str_detect(area_code, "^N")) %>%
   ggplot(aes(fill = coastal)) +
   geom_sf(colour = "black") +
   scale_fill_manual(values = c(Coastal = "turquoise", Inland = "darkGreen")) +
@@ -123,18 +123,18 @@ glimpse(pubs_data)
 
     ## Rows: 391
     ## Columns: 12
-    ## $ area_code       <chr> "E06000047", "E06000005", "E06000001", "E06000002", "E…
-    ## $ area_name       <chr> "County Durham", "Darlington", "Hartlepool", "Middlesb…
-    ## $ num_pubs        <dbl> 325, 70, 50, 65, 245, 85, 110, 120, 195, 105, 100, 145…
-    ## $ pop             <dbl> 526980, 106566, 93242, 140545, 320274, 136718, 197213,…
-    ## $ pubs_per_capita <dbl> 0.0006167217, 0.0006568699, 0.0005362390, 0.0004624853…
-    ## $ country         <chr> "England", "England", "England", "England", "England",…
-    ## $ median_pay_2017 <dbl> 439.0, 416.2, 431.6, 364.3, 413.2, 387.6, 435.7, 405.5…
-    ## $ area_sqkm       <dbl> 2231.5422, 197.4758, 93.5595, 53.8888, 5026.2114, 244.…
-    ## $ coastal         <chr> "Coastal", "Inland", "Coastal", "Coastal", "Coastal", …
-    ## $ pop_dens        <dbl> 236.15059, 539.64081, 996.60644, 2608.05585, 63.72076,…
-    ## $ life_exp_female <dbl> 81.46, 82.39, 81.33, 80.02, 82.71, 81.78, 81.41, 81.43…
-    ## $ life_exp_male   <dbl> 78.24, 78.72, 76.82, 75.27, 79.40, 77.99, 78.14, 77.46…
+    ## $ area_code       <chr> "E06000047", "E06000005", "E06000001", "E06000002", "E~
+    ## $ area_name       <chr> "County Durham", "Darlington", "Hartlepool", "Middlesb~
+    ## $ num_pubs        <dbl> 325, 70, 50, 65, 245, 85, 110, 120, 195, 105, 100, 145~
+    ## $ pop             <dbl> 526980, 106566, 93242, 140545, 320274, 136718, 197213,~
+    ## $ pubs_per_capita <dbl> 0.0006167217, 0.0006568699, 0.0005362390, 0.0004624853~
+    ## $ country         <chr> "England", "England", "England", "England", "England",~
+    ## $ median_pay_2017 <dbl> 439.0, 416.2, 431.6, 364.3, 413.2, 387.6, 435.7, 405.5~
+    ## $ area_sqkm       <dbl> 2231.5422, 197.4758, 93.5595, 53.8888, 5026.2114, 244.~
+    ## $ coastal         <chr> "Coastal", "Inland", "Coastal", "Coastal", "Coastal", ~
+    ## $ pop_dens        <dbl> 236.15059, 539.64081, 996.60644, 2608.05585, 63.72076,~
+    ## $ life_exp_female <dbl> 81.46, 82.39, 81.33, 80.02, 82.71, 81.78, 81.41, 81.43~
+    ## $ life_exp_male   <dbl> 78.24, 78.72, 76.82, 75.27, 79.40, 77.99, 78.14, 77.46~
 
 It would be good to see where our missing data are. For this, there are
 two functions you haven’t necessarily seen before: `across` and
@@ -153,7 +153,7 @@ cols_with_NAs <- pubs_data %>%
 cols_with_NAs
 ```
 
-    ## # A tibble: 1 × 4
+    ## # A tibble: 1 x 4
     ##   NAs_median_pay_2017 NAs_coastal NAs_life_exp_female NAs_life_exp_male
     ##                 <int>       <int>               <int>             <int>
     ## 1                  13          11                  20                20
@@ -289,7 +289,7 @@ pubs_data %>%
   select(area_name, num_pubs, pop, pubs_per_capita)
 ```
 
-    ## # A tibble: 2 × 4
+    ## # A tibble: 2 x 4
     ##   area_name       num_pubs   pop pubs_per_capita
     ##   <chr>              <dbl> <dbl>           <dbl>
     ## 1 City of London       160  8706         0.0184 
@@ -353,7 +353,7 @@ mod <- linear_reg() %>%
 tidy(mod)
 ```
 
-    ## # A tibble: 2 × 5
+    ## # A tibble: 2 x 5
     ##   term                estimate   std.error statistic  p.value
     ##   <chr>                  <dbl>       <dbl>     <dbl>    <dbl>
     ## 1 (Intercept)      0.00100     0.0000909       11.0  1.15e-24
@@ -382,18 +382,24 @@ half of its population earning £0 per week.* 💡
 glance(mod)
 ```
 
-    ## # A tibble: 1 × 12
+    ## # A tibble: 1 x 12
     ##   r.squared adj.r.squared    sigma statistic  p.value    df logLik    AIC    BIC
     ##       <dbl>         <dbl>    <dbl>     <dbl>    <dbl> <dbl>  <dbl>  <dbl>  <dbl>
     ## 1    0.0434        0.0408 0.000260      17.1  4.48e-5     1  2585. -5164. -5152.
-    ## # … with 3 more variables: deviance <dbl>, df.residual <int>, nobs <int>
+    ## # ... with 3 more variables: deviance <dbl>, df.residual <int>, nobs <int>
 
 The *R*<sup>2</sup> isn’t amazing here. Perhaps we can improve the model
 fit by considering more terms?
 
-### Adding a categorical predictor
+### Adding other variables
 
-This document will be completed during the live session.
+Let’s try fitting a full model. But we’ll do this “properly”, defining a
+proper workflow. We’ll filter out Northern Ireland, because for several
+of the variables we have no data for it, and so we would either need to
+fill in these data (using different datasets) or, more likely, fit a
+different model. We also create dummy variables; since our response is
+not a “nominal” variable, we don’t need to exclude it, but if we did
+we’d add `, -all_outcomes()` to the `step_dummy` step.
 
 ``` r
 pubs_rec <- recipe(pubs_per_capita ~ ., data = pubs_reduced) %>%
@@ -409,18 +415,28 @@ pubs_wflow <- workflow() %>%
   add_recipe(pubs_rec)
 ```
 
+We’ll now do a test-train split. Of course, we should have done this
+right at the start, because we shouldn’t touch our testing data at all
+until the very end of our analysis. We didn’t do the split earlier
+because this code-along touch place over three weeks, and we hadn’t done
+test-train splits when we started!
+
 ``` r
 set.seed(8651)
 pubs_split <- initial_split(pubs_reduced, prop = 0.8, strata = country)
 pubs_train <- training(pubs_split)
 pubs_test  <- testing(pubs_split)
+```
 
+Now we can try fitting a model to the training data.
+
+``` r
 pubs_train_fit <- pubs_wflow %>%
   fit(data = pubs_train)
 tidy(pubs_train_fit)
 ```
 
-    ## # A tibble: 9 × 5
+    ## # A tibble: 9 x 5
     ##   term                     estimate std.error statistic    p.value
     ##   <chr>                       <dbl>     <dbl>     <dbl>      <dbl>
     ## 1 (Intercept)              -3.19e-3   9.74e-4    -3.28   0.00118  
@@ -433,15 +449,126 @@ tidy(pubs_train_fit)
     ## 8 country_Wales             1.24e-4   5.64e-5     2.20   0.0286   
     ## 9 coastal_Inland           -5.45e-5   2.89e-5    -1.88   0.0606
 
+💡 *Interpret this model, in terms of how the number of pubs **per 10,000
+people** changes as each of these factors increases.* 💡
+
+We’ve talked before about how it’s a good idea for explanatory variables
+to be approximately uncorrelated. This is a good example of why: in our
+model, `pubs_per_capita` increases as `life_exp_female` increases, but
+it *decreases* as `life_exp_male` increases—all else being equal, that
+is. The thing is that, in real life, all else just isn’t equal: in
+general, as female life expectancy increases in a region, so does male
+life expectancy (see the pairs plot several sections up!).
+
+So let’s try working with a new variable, `life_exp_diff`, which is the
+difference between the two life expectancies. If we then just use one of
+the life expectancy variables, this should hopefully get rid of much of
+the correlation—but let’s check that. On this plot, negative values of
+the difference indicate that women’s life expectancy is higher than
+men’s.
+
+``` r
+pubs_train %>%
+  mutate(life_exp_diff = life_exp_male - life_exp_female) %>%
+  ggplot(aes(x = life_exp_female, y = life_exp_diff)) +
+  geom_point() +
+  labs(
+    x = "Life expectancy for women (years)",
+    y = "Difference between men's and women's life expectancy (years)",
+    title = "This isn't perfect, but there's much less correlation here",
+    subtitle = "Data from 2016–18 across UK local authorities; some missing data"
+  )
+```
+
+    ## Warning: Removed 16 rows containing missing values (geom_point).
+
+![](pubs_files/figure-gfm/check-corr-1.png)<!-- -->
+
+The missing data, as we outlined above, are the City of London, the
+Isles of Scilly, and those local authorities which existed in 2018 but
+no longer exist today.
+
+Now we’ll refit the model, and it will maybe let us make more sensible
+interpretations.
+
+``` r
+pubs_rec_diff <- pubs_rec %>%
+  step_mutate(life_exp_diff = life_exp_male - life_exp_female) %>%
+  step_rm(life_exp_male)
+
+pubs_wflow_diff <- workflow() %>%
+  add_model(pubs_mod) %>%
+  add_recipe(pubs_rec_diff)
+
+pubs_train_fit_diff <- pubs_wflow_diff %>%
+  fit(data = pubs_train)
+tidy(pubs_train_fit_diff)
+```
+
+    ## # A tibble: 9 x 5
+    ##   term                     estimate std.error statistic     p.value
+    ##   <chr>                       <dbl>     <dbl>     <dbl>       <dbl>
+    ## 1 (Intercept)              -3.19e-3   9.74e-4    -3.28   0.00118   
+    ## 2 median_pay_2017          -1.31e-6   3.12e-7    -4.18   0.0000392 
+    ## 3 pop_dens                 -5.83e-9   7.07e-9    -0.824  0.411     
+    ## 4 life_exp_female           5.65e-5   1.25e-5     4.51   0.00000968
+    ## 5 country_Northern.Ireland NA        NA          NA     NA         
+    ## 6 country_Scotland         -5.85e-5   5.72e-5    -1.02   0.307     
+    ## 7 country_Wales             1.24e-4   5.64e-5     2.20   0.0286    
+    ## 8 coastal_Inland           -5.45e-5   2.89e-5    -1.88   0.0606    
+    ## 9 life_exp_diff             7.42e-5   2.50e-5     2.97   0.00321
+
+💡 *All the estimates except that for `life_exp_female` are exactly the
+same. Do you think this is a coincidence?* 💡
+
+Now we can sensibly interpret this: for each year added on to women’s
+life expectancy, *all else being equal*, the number of pubs per 10,000
+people increases by 0.565, and as the difference in men’s and women’s
+life expectancy increases by one year, *all else being equal*, the
+number of pubs per 10,000 people increases by 0.742 [3].
+
+💡 *What would happen if we took men’s life expectancy and the difference
+as the two life expectancy variables?* 💡
+
+Finally, let’s have a look at the adjusted *R*<sup>2</sup> for these two
+models.
+
 ``` r
 glance(pubs_train_fit)
 ```
 
-    ## # A tibble: 1 × 12
+    ## # A tibble: 1 x 12
     ##   r.squared adj.r.squared    sigma statistic  p.value    df logLik    AIC    BIC
     ##       <dbl>         <dbl>    <dbl>     <dbl>    <dbl> <dbl>  <dbl>  <dbl>  <dbl>
     ## 1     0.203         0.183 0.000229      10.1 3.35e-11     7  1982. -3945. -3912.
-    ## # … with 3 more variables: deviance <dbl>, df.residual <int>, nobs <int>
+    ## # ... with 3 more variables: deviance <dbl>, df.residual <int>, nobs <int>
+
+``` r
+glance(pubs_train_fit_diff)
+```
+
+    ## # A tibble: 1 x 12
+    ##   r.squared adj.r.squared    sigma statistic  p.value    df logLik    AIC    BIC
+    ##       <dbl>         <dbl>    <dbl>     <dbl>    <dbl> <dbl>  <dbl>  <dbl>  <dbl>
+    ## 1     0.203         0.183 0.000229      10.1 3.35e-11     7  1982. -3945. -3912.
+    ## # ... with 3 more variables: deviance <dbl>, df.residual <int>, nobs <int>
+
+It’s the same!
+
+💡 *Do you think **this** is a coincidence?* 💡
+
+This doesn’t always happen when you mutate variables; it’s because we
+replaced one of our variables with a “linear combination” of that
+variable and another. I can’t say more than that without getting too
+technical!
+
+Finally, I’ll just note that the adjusted *R*<sup>2</sup> value… isn’t
+that great, still, though it’s better than in the univariate model. We
+might want to see if there are any better models we could fit, perhaps
+with additional data.
+
+💡 *What could we do next? How could we run a *v*-fold cross validation?
+At what point should we use the training data, and for what?* 💡
 
 [1] Sex and gender are, of course, more complicated than that, but the
 ONS only gives “male” and “female” figures; in the UK all birth
@@ -449,3 +576,8 @@ certificates have one of these two options recorded.
 
 [2] Source: [City of London
 website](https://www.cityoflondon.gov.uk/supporting-businesses/economic-research/statistics-about-the-city)
+
+[3] We’re not talking much about *p*-values in this course, but, for
+what it’s worth, the `life_exp_female` variable in this model is now
+much more significant than either of the life expectancies in the
+original.
