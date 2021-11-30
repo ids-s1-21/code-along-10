@@ -213,7 +213,7 @@ We can interpret this as saying that:
 
 That last number isn't very human readable.  Let's consider instead the number of pubs per 10,000 people.  Let's also consider what happens when pay increases by £100 per week.  This has the combined effect of multiplying the number by $10\,000 \times 100 = 1\,000\,000$.  So we have that
 
-- for every £100 per week that median pay increases, the predicted number of pubs per capita *decreases* by `r abs_str(mod, "median_pay_2017", scale = 1e6)`.
+- for every £100 per week that median pay increases, the predicted number of pubs per 10,000 people *decreases* by `r abs_str(mod, "median_pay_2017", scale = 1e6)`.
 
 `r lightbulb("Is the intercept meaningful here?  Note that, since pay can't be negative, a district with median pay of £0 per week must have more than half of its population earning £0 per week.")`
 
@@ -226,3 +226,29 @@ The $R^2$ isn't amazing here.  Perhaps we can improve the model fit by consideri
 ### Adding a categorical predictor
 
 This document will be completed during the live session.
+
+```{r workflow}
+pubs_rec <- recipe(pubs_per_capita ~ ., data = pubs_reduced) %>%
+  step_rm(area_name, area_code, num_pubs, pop, area_sqkm) %>%
+  step_filter(country != "Northern Ireland") %>%
+  step_dummy(all_nominal())
+
+pubs_mod <- linear_reg() %>%
+  set_engine("lm")
+
+pubs_wflow <- workflow() %>%
+  add_model(pubs_mod) %>%
+  add_recipe(pubs_rec)
+```
+
+```{r test-train-split}
+set.seed(8651)
+pubs_split <- initial_split(pubs_reduced, prop = 0.8, strata = country)
+pubs_train <- training(pubs_split)
+pubs_test  <- testing(pubs_split)
+
+pubs_train_fit <- pubs_wflow %>%
+  fit(data = pubs_train)
+tidy(pubs_train_fit)
+glance(pubs_train_fit)
+```

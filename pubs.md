@@ -372,7 +372,7 @@ pay increases by £100 per week. This has the combined effect of
 multiplying the number by 10 000 × 100 = 1 000 000. So we have that
 
 -   for every £100 per week that median pay increases, the predicted
-    number of pubs per capita *decreases* by -0.823.
+    number of pubs per 10,000 people *decreases* by -0.823.
 
 💡 *Is the intercept meaningful here? Note that, since pay can’t be
 negative, a district with median pay of £0 per week must have more than
@@ -394,6 +394,54 @@ fit by considering more terms?
 ### Adding a categorical predictor
 
 This document will be completed during the live session.
+
+``` r
+pubs_rec <- recipe(pubs_per_capita ~ ., data = pubs_reduced) %>%
+  step_rm(area_name, area_code, num_pubs, pop, area_sqkm) %>%
+  step_filter(country != "Northern Ireland") %>%
+  step_dummy(all_nominal())
+
+pubs_mod <- linear_reg() %>%
+  set_engine("lm")
+
+pubs_wflow <- workflow() %>%
+  add_model(pubs_mod) %>%
+  add_recipe(pubs_rec)
+```
+
+``` r
+set.seed(8651)
+pubs_split <- initial_split(pubs_reduced, prop = 0.8, strata = country)
+pubs_train <- training(pubs_split)
+pubs_test  <- testing(pubs_split)
+
+pubs_train_fit <- pubs_wflow %>%
+  fit(data = pubs_train)
+tidy(pubs_train_fit)
+```
+
+    ## # A tibble: 9 × 5
+    ##   term                     estimate std.error statistic    p.value
+    ##   <chr>                       <dbl>     <dbl>     <dbl>      <dbl>
+    ## 1 (Intercept)              -3.19e-3   9.74e-4    -3.28   0.00118  
+    ## 2 median_pay_2017          -1.31e-6   3.12e-7    -4.18   0.0000392
+    ## 3 pop_dens                 -5.83e-9   7.07e-9    -0.824  0.411    
+    ## 4 life_exp_female          -1.77e-5   2.72e-5    -0.648  0.517    
+    ## 5 life_exp_male             7.42e-5   2.50e-5     2.97   0.00321  
+    ## 6 country_Northern.Ireland NA        NA          NA     NA        
+    ## 7 country_Scotland         -5.85e-5   5.72e-5    -1.02   0.307    
+    ## 8 country_Wales             1.24e-4   5.64e-5     2.20   0.0286   
+    ## 9 coastal_Inland           -5.45e-5   2.89e-5    -1.88   0.0606
+
+``` r
+glance(pubs_train_fit)
+```
+
+    ## # A tibble: 1 × 12
+    ##   r.squared adj.r.squared    sigma statistic  p.value    df logLik    AIC    BIC
+    ##       <dbl>         <dbl>    <dbl>     <dbl>    <dbl> <dbl>  <dbl>  <dbl>  <dbl>
+    ## 1     0.203         0.183 0.000229      10.1 3.35e-11     7  1982. -3945. -3912.
+    ## # … with 3 more variables: deviance <dbl>, df.residual <int>, nobs <int>
 
 [1] Sex and gender are, of course, more complicated than that, but the
 ONS only gives “male” and “female” figures; in the UK all birth
